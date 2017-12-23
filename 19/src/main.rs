@@ -1,4 +1,3 @@
-// use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -21,15 +20,15 @@ fn main() {
     let mut direction: Direction = Direction::SOUTH;
 
 
-    let mut maze: Vec<Vec<char>> = Vec::new();
+
     let mut word: Vec<char> = Vec::new();
     let mut steps = 0;
 
-    for line in f.lines() {
-        let line = line.expect("Unable to read line");
-        let line: Vec<char> = line.chars().collect();
-        maze.push(line);
-    }
+    let maze: Vec<Vec<char>> = f.lines()
+        .map(|l| l.expect("Unable to read line").chars().collect())
+        .collect();
+
+
 
     for (index, element) in maze[0].iter().enumerate() {
         if *element == PIPE {
