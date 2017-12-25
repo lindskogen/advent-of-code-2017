@@ -1,7 +1,10 @@
+extern crate time;
+
 use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::collections::HashSet;
+use time::PreciseTime;
 
 type Bridge = Vec<BridgePart>;
 
@@ -83,6 +86,7 @@ fn max_value_bridges(bridges: &Vec<Bridge>) -> u32 {
 }
 
 fn main() {
+    let start = PreciseTime::now();
     let f = File::open("input").expect("file not found");
     let f = BufReader::new(f);
 
@@ -110,5 +114,7 @@ fn main() {
         "Max value for max length bridge {:?}",
         max_value_for_max_length
     );
+
+    println!("{:?}", start.to(PreciseTime::now()));
 
 }
