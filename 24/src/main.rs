@@ -90,7 +90,8 @@ fn main() {
         .map(|l| BridgePart::parse(&l.expect("Unable to read line")))
         .collect();
 
-    let bridges: Vec<Bridge> = make_bridge(&vec![], 0, parts.clone());
+    let bridges: Vec<Bridge> = make_bridge(&vec![], 0, parts);
+    println!("Num bridges considered: {}", bridges.len());
 
     let max_value = max_value_bridges(&bridges);
 
