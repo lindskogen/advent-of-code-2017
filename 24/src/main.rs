@@ -54,28 +54,27 @@ fn bridge_sum(bridge: &Bridge) -> u32 {
     bridge.iter().map(BridgePart::value).sum()
 }
 
-fn make_bridge(start: &Bridge, open_port: u32, parts: HashSet<BridgePart>) -> Vec<Bridge> {
+fn make_bridge(start: &Bridge, open_port: u32, parts: &HashSet<BridgePart>) -> Vec<Bridge> {
 
     let compatible_parts: Bridge = parts
         .iter()
         .filter(|part| part.has_port(open_port))
         .cloned()
         .collect();
-    let length = compatible_parts.len();
 
-    if length == 0 {
+    if compatible_parts.len() == 0 {
         vec![start.clone()]
     } else {
         compatible_parts
-            .iter()
+            .into_iter()
             .flat_map(|part| {
                 let other_port = part.other_port(open_port);
                 let mut rest_parts = parts.clone();
-                rest_parts.remove(part);
+                rest_parts.remove(&part);
                 let mut bridge = start.clone();
-                bridge.push(part.clone());
+                bridge.push(part);
 
-                make_bridge(&bridge, other_port, rest_parts)
+                make_bridge(&bridge, other_port, &rest_parts)
             })
             .collect()
     }
@@ -83,6 +82,10 @@ fn make_bridge(start: &Bridge, open_port: u32, parts: HashSet<BridgePart>) -> Ve
 
 fn max_value_bridges(bridges: &Vec<Bridge>) -> u32 {
     bridges.iter().map(bridge_sum).max().unwrap()
+}
+
+fn filter_len_bridges(bridges: Vec<Bridge>, length: usize) -> Vec<Bridge> {
+    bridges.into_iter().filter(|b| b.len() == length).collect()
 }
 
 fn main() {
@@ -94,19 +97,12 @@ fn main() {
         .map(|l| BridgePart::parse(&l.expect("Unable to read line")))
         .collect();
 
-    let bridges: Vec<Bridge> = make_bridge(&vec![], 0, parts);
+    let bridges: Vec<Bridge> = make_bridge(&vec![], 0, &parts);
     println!("Num bridges considered: {}", bridges.len());
 
     let max_value = max_value_bridges(&bridges);
-
     let max_len = bridges.iter().map(Vec::len).max().unwrap();
-
-    let max_len_bridges: Vec<Bridge> = bridges
-        .iter()
-        .filter(|b| b.len() == max_len)
-        .cloned()
-        .collect();
-
+    let max_len_bridges = filter_len_bridges(bridges, max_len);
     let max_value_for_max_length = max_value_bridges(&max_len_bridges);
 
     println!("Max value for any bridge {:?}", max_value);
