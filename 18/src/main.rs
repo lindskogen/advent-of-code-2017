@@ -1,80 +1,227 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::thread;
+use std::time::Duration;
+use std::sync::mpsc::channel;
+use std::sync::mpsc::{Sender, Receiver};
 
-fn get_register_value(var: &str, variables: &HashMap<String, i64>) -> i64 {
-    match var.parse::<i64>() {
-        Ok(num) => num,
-        _ => *variables.get(var).unwrap_or(&0),
+#[derive(Debug, Copy, Clone)]
+enum Token {
+    Var(char),
+    Val(i64),
+}
+
+impl Token {
+    fn from(string: &str) -> Token {
+        match string.parse::<i64>() {
+            Ok(num) => Token::Val(num),
+            _ => Token::Var(string.chars().nth(0).unwrap()),
+        }
     }
 }
+
+#[derive(Debug, Copy, Clone)]
+enum Expr {
+    Snd(Token),
+    Set(Token, Token),
+    Add(Token, Token),
+    Mul(Token, Token),
+    Mod(Token, Token),
+    Rcv(Token),
+    Jgz(Token, Token),
+}
+
+fn unwrap_double(expr: &str, param1: Option<&str>, param2: Option<&str>) -> Expr {
+    let t1 = Token::from(param1.unwrap());
+    let t2 = Token::from(param2.unwrap());
+
+    match expr {
+        "set" => Expr::Set(t1, t2),
+        "add" => Expr::Add(t1, t2),
+        "mul" => Expr::Mul(t1, t2),
+        "mod" => Expr::Mod(t1, t2),
+        "jgz" => Expr::Jgz(t1, t2),
+        _ => panic!("Cannot parse exp: {:?}", expr),
+    }
+}
+
+impl Expr {
+    fn from(string: &String) -> Expr {
+        let mut exprs = string.split_whitespace();
+        let exp = exprs.next().unwrap();
+        let param1 = exprs.next();
+        let param2 = exprs.next();
+
+        match exp {
+            "set" | "add" | "mul" | "mod" | "jgz" => unwrap_double(exp, param1, param2),
+            "rcv" => Expr::Rcv(Token::from(param1.unwrap())),
+            "snd" => Expr::Snd(Token::from(param1.unwrap())),
+            _ => panic!("Cannot parse exp: {:?}", exp),
+        }
+    }
+}
+
+
+
+#[derive(Debug)]
+struct Program {
+    id: i64,
+    values_sent: u32,
+    variables: HashMap<char, i64>,
+    pc: usize,
+    last_sound: i64,
+}
+
+impl Program {
+    fn new(p: i64) -> Program {
+        let mut map = HashMap::new();
+        map.insert('p', p);
+
+        Program {
+            id: p,
+            values_sent: 0,
+            variables: map,
+            pc: 0,
+            last_sound: 0,
+        }
+    }
+    fn get_register_value(&self, token: &Token) -> i64 {
+        match *token {
+            Token::Val(num) => num,
+            Token::Var(ch) => *self.variables.get(&ch).unwrap_or(&0),
+        }
+    }
+    fn set_register_value(&mut self, token: &Token, value: i64) {
+        match *token {
+            Token::Var(ch) => self.variables.insert(ch, value),
+            _ => None,
+        };
+    }
+    fn update_register_value<F>(&mut self, t1: &Token, t2: &Token, closure: F)
+    where
+        F: Fn(i64, i64) -> i64,
+    {
+        let v1 = self.get_register_value(t1);
+        let v2 = self.get_register_value(t2);
+
+        self.set_register_value(t1, closure(v1, v2));
+    }
+    fn run_program(&mut self, program: &Vec<Expr>) -> i64 {
+        while self.pc < program.len() {
+            match program[self.pc] {
+                Expr::Snd(token) => {
+                    self.last_sound = self.get_register_value(&token);
+                }
+                Expr::Set(t1, t2) => {
+                    self.update_register_value(&t1, &t2, |_, b| b);
+                }
+                Expr::Add(t1, t2) => {
+                    self.update_register_value(&t1, &t2, |a, b| a + b);
+                }
+                Expr::Mul(t1, t2) => {
+                    self.update_register_value(&t1, &t2, |a, b| a * b);
+                }
+                Expr::Mod(t1, t2) => {
+                    self.update_register_value(&t1, &t2, |a, b| a % b);
+                }
+                Expr::Rcv(token) => {
+                    let value = self.get_register_value(&token);
+                    if value != 0 {
+                        return self.last_sound;
+                    }
+                }
+                Expr::Jgz(t1, t2) => {
+                    let condition_value = self.get_register_value(&t1);
+                    let jump_value = self.get_register_value(&t2);
+                    if condition_value > 0 {
+                        self.pc = ((self.pc as i64) + jump_value) as usize;
+                        continue;
+                    }
+                }
+            }
+            self.pc += 1;
+        }
+
+        return 0;
+    }
+
+    fn run_program_channels(
+        &mut self,
+        program: &Vec<Expr>,
+        tx: Sender<i64>,
+        rx: Receiver<i64>,
+    ) -> u32 {
+        while self.pc < program.len() {
+            match program[self.pc] {
+                Expr::Snd(token) => {
+                    let val = self.get_register_value(&token);
+                    tx.send(val).unwrap();
+                    self.values_sent += 1;
+                }
+                Expr::Set(t1, t2) => {
+                    self.update_register_value(&t1, &t2, |_, b| b);
+                }
+                Expr::Add(t1, t2) => {
+                    self.update_register_value(&t1, &t2, |a, b| a + b);
+                }
+                Expr::Mul(t1, t2) => {
+                    self.update_register_value(&t1, &t2, |a, b| a * b);
+                }
+                Expr::Mod(t1, t2) => {
+                    self.update_register_value(&t1, &t2, |a, b| a % b);
+                }
+                Expr::Rcv(token) => {
+                    match rx.recv_timeout(Duration::from_secs(5)) {
+                        Ok(value) => self.set_register_value(&token, value),
+                        _ => {
+                            return self.values_sent;
+                        }
+                    }
+                }
+                Expr::Jgz(t1, t2) => {
+                    let condition_value = self.get_register_value(&t1);
+                    let jump_value = self.get_register_value(&t2);
+                    if condition_value > 0 {
+                        self.pc = ((self.pc as i64) + jump_value) as usize;
+                        continue;
+                    }
+                }
+            }
+            self.pc += 1;
+        }
+        return 0;
+    }
+}
+
 
 fn main() {
     let f = File::open("input").expect("file not found");
     let f = BufReader::new(f);
 
-    let mut pc: usize = 0;
+    let expressions: Vec<Expr> = f.lines()
+        .map(|l| Expr::from(&l.expect("Unable to read line")))
+        .collect();
 
-    let mut last_sound: i64 = 0;
-    let mut last_recovered: i64 = 0;
+    let mut program = Program::new(0);
+    let part1 = program.run_program(&expressions);
+    println!("Recovered frequency: {}", part1);
 
-    let mut variables: HashMap<String, i64> = HashMap::new();
+    let exps1 = expressions.clone();
+    let exps2 = expressions.clone();
 
-    let program: Vec<String> = f.lines().map(|l| l.expect("Unable to read line")).collect();
+    let (tx1, rx2) = channel();
+    let (tx2, rx1) = channel();
+    let mut program1 = Program::new(0);
+    let mut program2 = Program::new(1);
 
-    while pc < program.len() {
-        let expr: Vec<String> = program[pc].split_whitespace().map(String::from).collect();
+    let h1 = thread::spawn(move || program1.run_program_channels(&exps1, tx1, rx1));
 
-        match &expr[0][..] {
-            "snd" => {
-                last_sound = get_register_value(&expr[1][..], &variables);
-            }
-            "set" => {
-                let value = get_register_value(&expr[2][..], &variables);
-                variables.insert(expr[1].clone(), value);
-            }
-            "add" => {
-                let prev_value = get_register_value(&expr[1][..], &variables);
-                let value = get_register_value(&expr[2][..], &variables);
+    let h2 = thread::spawn(move || {
+        let times = program2.run_program_channels(&exps2, tx2, rx2);
+        println!("Send called times: {}", times);
+    });
 
-                variables.insert(expr[1].clone(), prev_value + value);
-            }
-            "mul" => {
-                let prev_value = get_register_value(&expr[1][..], &variables);
-                let value = get_register_value(&expr[2][..], &variables);
-
-                variables.insert(expr[1].clone(), prev_value * value);
-            }
-            "mod" => {
-                let prev_value = get_register_value(&expr[1][..], &variables);
-                let value = get_register_value(&expr[2][..], &variables);
-                variables.insert(expr[1].clone(), prev_value % value);
-            }
-            "rcv" => {
-                let value = get_register_value(&expr[1][..], &variables);
-
-
-                if value != 0 {
-                    last_recovered = last_sound;
-                    break;
-                }
-            }
-            "jgz" => {
-                let condition_value = get_register_value(&expr[1][..], &variables);
-                let jump_value = get_register_value(&expr[2][..], &variables);
-
-                if condition_value > 0 {
-                    pc = ((pc as i64) + jump_value) as usize;
-                    continue;
-                }
-            }
-            st => {
-                panic!("{} not a valid command", st);
-            }
-        }
-        pc += 1;
-    }
-
-    println!("recv: {}", last_recovered);
-
+    h1.join().expect("Thread 0 failed");
+    h2.join().expect("Thread 1 failed");
 }
