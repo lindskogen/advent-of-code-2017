@@ -99,7 +99,7 @@ fn main() {
     let steps: Vec<Direction> = f.lines()
         .nth(0)
         .unwrap()
-        .unwrap()
+        .expect("Error reading line")
         .split(',')
         .map(|l| Direction::from(l).unwrap())
         .collect();
