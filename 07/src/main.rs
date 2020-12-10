@@ -30,31 +30,83 @@ impl Program {
         }
 
         Program {
-            name: name,
-            weight: weight,
-            names_above: names_above,
+            name,
+            weight,
+            names_above,
         }
     }
 }
 
-fn name(programs: Vec<Program>) -> String {
-
-    let mut map: HashMap<&str, &Program> = programs
-        .iter()
-        .flat_map(|p| p.names_above.into_iter().map(|n| (&n[..], p)))
-        .collect();
-
-
-    String::from("hello")
-}
-
 fn main() {
-    let f = File::open("input-small").expect("file not found");
+    let f = File::open("input").expect("file not found");
     let f = BufReader::new(f);
 
-    let programs: Vec<Program> = f.lines()
+    let programs: HashMap<String, Program> = f.lines()
         .map(|line| {
-            Program::parse(&line.expect("Unable to read line")[..])
+            let p = Program::parse(&line.expect("Unable to read line")[..]);
+            (p.name.clone(), p)
         })
         .collect();
+
+    let mut map: HashMap<&String, &Program>  = HashMap::new();
+
+
+    for (_, p) in programs.iter() {
+        for name in p.names_above.iter() {
+            map.insert(name, p);
+        }
+    }
+
+    if let Some(start_program) = programs.values().collect::<Vec<_>>().first() {
+
+        let mut root = start_program;
+
+        while let Some(program) = map.get(&root.name) {
+            root = &program;
+        }
+
+        println!("Part 1: {}", root.name);
+
+        let mut program_name = &root.name;
+        let mut diff = 0;
+
+        while let Some(program) = programs.get(program_name) {
+            let mut siblings = program.names_above.iter().enumerate()
+                .map(|(index, n)|
+                    (index, sum_sub_tower(&programs, programs.get(n).expect("no program")))
+                ).collect::<Vec<_>>();
+            siblings.sort_by_key(|a| a.1);
+
+            let first = siblings.get(0).expect("no first");
+            let middle = siblings.get(siblings.len() / 2usize).expect("no middle");
+            let last = siblings.last().expect("no last");
+
+            if first.1 != last.1 {
+                if first.1 == middle.1 {
+                    diff = last.1 - middle.1;
+                    program_name = program.names_above.get(last.0).unwrap();
+                } else {
+                    diff = middle.1 - first.1;
+                    program_name = program.names_above.get(first.0).unwrap();
+                }
+            } else {
+                println!("Part 2: {}", program.weight - diff);
+                return;
+            }
+        }
+    }
+}
+
+fn sum_sub_tower(programs: &HashMap<String, Program>, root: &Program) -> u32 {
+    let weight = root.weight;
+
+    if root.names_above.is_empty() {
+        return weight;
+    }
+
+    let siblings: Vec<u32> = root.names_above.iter().map(|n| {
+        programs.get(n).map_or(0, |p| sum_sub_tower(&programs,p))
+    }).collect();
+
+    return weight + siblings.iter().sum::<u32>();
 }
