@@ -5,16 +5,12 @@ fn reverse_range(range: &mut Vec<u8>, index: usize, length: u8) {
     for i in 0..(length / 2) {
         let index1 = (index + (i as usize)) % range.len();
         let index2 = (index + (length as usize) - 1 - (i as usize)) % range.len();
-        let tmp = range[index1];
-        range[index1] = range[index2];
-        range[index2] = tmp;
+        range.swap(index1, index2);
     }
 }
 
 fn hash(upper_bound: u8, lengths: &Vec<u8>, rounds: u32) -> Vec<u8> {
-    let mut range = (0 as u32..upper_bound as u32 + 1)
-        .map(|x| x as u8)
-        .collect::<Vec<u8>>();
+    let mut range: Vec<u8> = (0..=upper_bound).collect();
     let mut current: usize = 0;
     let mut skip_size: usize = 0;
 
@@ -28,7 +24,7 @@ fn hash(upper_bound: u8, lengths: &Vec<u8>, rounds: u32) -> Vec<u8> {
     range
 }
 
-fn solve1(upper_bound: u8, lengths: &Vec<u8>) -> u64 {
+pub fn solve1(upper_bound: u8, lengths: &Vec<u8>) -> u64 {
     hash(upper_bound, lengths, 1)
         .into_iter()
         .take(2)
@@ -36,7 +32,7 @@ fn solve1(upper_bound: u8, lengths: &Vec<u8>) -> u64 {
         .product()
 }
 
-fn hash_string(input: &str) -> String {
+pub fn hash_string(input: &str) -> String {
     let suffix: Vec<u8> = vec![17, 31, 73, 47, 23];
 
     let appendage = suffix.into_iter().map(|a| a as char);
@@ -53,14 +49,14 @@ fn hash_string(input: &str) -> String {
     slices.join("")
 }
 
-
-fn main() {
+#[test]
+fn it_handles_star_1_and_2() {
     assert_eq!(solve1(4, &vec![3, 4, 1, 5]), 12);
 
-    let f = File::open("input").expect("file not found");
+    let f = File::open("src/day10/input").expect("file not found");
     let f = BufReader::new(f);
 
-    let string = f.lines().nth(0).unwrap().expect("Error reading line");
+    let string = f.lines().next().unwrap().expect("Error reading line");
 
     let lengths = string
         .split(',')
@@ -78,5 +74,5 @@ fn main() {
     assert_eq!(hash_string("1,2,4"), "63960835bcdc130f0b66d7ff4f6a5a8e");
 
     let hash = hash_string(&string[..]);
-    println!("Hash: {}", hash);
+    assert_eq!(hash, "70b856a24d586194331398c7fcfa0aaf");
 }

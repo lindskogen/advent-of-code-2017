@@ -6,11 +6,11 @@ use std::io::{BufRead, BufReader};
 fn sort_string(string: &str) -> String {
     let mut vec: Vec<char> = string.chars().collect();
     vec.sort();
-    return vec.into_iter().collect();
+    vec.into_iter().collect()
 }
 
 
-fn validate_line(line: &str) -> bool {
+pub fn validate_line(line: &str) -> bool {
     let mut set = HashSet::new();
 
     for word in line.split_whitespace() {
@@ -24,7 +24,8 @@ fn validate_line(line: &str) -> bool {
     return true;
 }
 
-fn main() {
+#[test]
+fn it_handles_star_1_and_2() {
     assert_eq!(true, validate_line("aa bb cc dd ee"));
     assert_eq!(false, validate_line("aa bb cc dd aa"));
     assert_eq!(true, validate_line("aa bb cc dd aaa"));
@@ -35,13 +36,14 @@ fn main() {
     assert_eq!(true, validate_line("iiii oiii ooii oooi oooo"));
     assert_eq!(false, validate_line("oiii ioii iioi iiio"));
 
-    let f = File::open("input").expect("file not found");
+    let f = File::open("src/day04/input").expect("file not found");
     let f = BufReader::new(f);
 
-    let res: Vec<bool> = f.lines()
-        .map(|line| validate_line(&line.expect("Error reading line")[..]))
-        .filter(|x| *x)
-        .collect();
+    let res = f.lines()
+        .filter_map(|line| {
+            line.ok().filter(|s| validate_line(s))
+        })
+        .count();
 
-    println!("{}", res.len());
+    assert_eq!(res, 265);
 }

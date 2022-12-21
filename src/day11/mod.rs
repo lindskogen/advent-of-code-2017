@@ -38,7 +38,7 @@ impl Direction {
 }
 
 #[derive(Debug)]
-struct Hex {
+pub struct Hex {
     q: i32,
     r: i32,
 }
@@ -61,7 +61,7 @@ impl Hex {
 }
 
 #[derive(Debug)]
-struct Cube {
+pub struct Cube {
     x: i32,
     y: i32,
     z: i32,
@@ -69,7 +69,7 @@ struct Cube {
 
 impl Cube {
     fn new(x: i32, y: i32, z: i32) -> Cube {
-        Cube { x: x, y: y, z: z }
+        Cube { x, y, z }
     }
     fn distance(&self, other: &Cube) -> i32 {
         let Cube {
@@ -83,21 +83,18 @@ impl Cube {
             z: z2,
         } = *other;
 
-        *vec![(x1 - x2).abs(), (y1 - y2).abs(), (z1 - z2).abs()]
-            .iter()
-            .max()
-            .unwrap()
+        (x1 - x2).abs().max((y1 - y2).abs()).max((z1 - z2).abs())
     }
 }
 
-fn main() {
-    let f = File::open("input").expect("file not found");
+#[test]
+fn it_handles_star_1_and_2() {
+    let f = File::open("src/day11/input").expect("file not found");
     let f = BufReader::new(f);
 
     let start_pos = Hex::new(0, 0);
 
-    let steps: Vec<Direction> = f.lines()
-        .nth(0)
+    let steps: Vec<Direction> = f.lines().next()
         .unwrap()
         .expect("Error reading line")
         .split(',')
@@ -118,6 +115,6 @@ fn main() {
         }
     }
 
-    println!("End distance: {}", pos.distance(&start_pos));
-    println!("Max distance: {}", max_distance);
+    assert_eq!(pos.distance(&start_pos), 877);
+    assert_eq!(max_distance, 1622);
 }

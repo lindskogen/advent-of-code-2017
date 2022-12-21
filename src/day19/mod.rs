@@ -11,8 +11,9 @@ enum Direction {
     EAST,
 }
 
-fn main() {
-    let f = File::open("input").expect("file not found");
+#[test]
+fn it_handles_star_1_and_2() {
+    let f = File::open("src/day19/input").expect("file not found");
     let f = BufReader::new(f);
 
     let mut x: usize = 0;
@@ -21,7 +22,7 @@ fn main() {
 
 
 
-    let mut word: Vec<char> = Vec::new();
+    let mut chars: Vec<char> = Vec::new();
     let mut steps = 0;
 
     let maze: Vec<Vec<char>> = f.lines()
@@ -78,11 +79,13 @@ fn main() {
                 break;
             }
             c => {
-                word.push(c);
+                chars.push(c);
             }
         }
     }
-    let st: String = word.iter().collect();
-    println!("Word: {}, steps: {}", st, steps);
+    let word: String = chars.iter().collect();
+    assert_eq!(word, "KGPTMEJVS");
+    assert_eq!(steps, 16328);
+    println!("Word: {}, steps: {}", word, steps);
 
 }

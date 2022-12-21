@@ -1,5 +1,3 @@
-extern crate time;
-
 use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -9,7 +7,7 @@ use time::PreciseTime;
 type Bridge = Vec<BridgePart>;
 
 #[derive(Eq, PartialEq, Hash, Clone)]
-struct BridgePart {
+pub struct BridgePart {
     input: u32,
     output: u32,
 }
@@ -80,7 +78,7 @@ fn make_bridge(start: &Bridge, open_port: u32, parts: &HashSet<BridgePart>) -> V
     }
 }
 
-fn max_value_bridges(bridges: &Vec<Bridge>) -> u32 {
+pub fn max_value_bridges(bridges: &Vec<Bridge>) -> u32 {
     bridges.iter().map(bridge_sum).max().unwrap()
 }
 
@@ -88,9 +86,10 @@ fn filter_len_bridges(bridges: Vec<Bridge>, length: usize) -> Vec<Bridge> {
     bridges.into_iter().filter(|b| b.len() == length).collect()
 }
 
-fn main() {
+#[test]
+fn it_handles_star_1_and_2() {
     let start = PreciseTime::now();
-    let f = File::open("input").expect("file not found");
+    let f = File::open("src/day24/input").expect("file not found");
     let f = BufReader::new(f);
 
     let parts: HashSet<BridgePart> = f.lines()
@@ -110,6 +109,9 @@ fn main() {
         "Max value for max length bridge {:?}",
         max_value_for_max_length
     );
+
+    assert_eq!(max_value, 1656);
+    assert_eq!(max_value_for_max_length, 1642);
 
     println!("{:?}", start.to(PreciseTime::now()));
 

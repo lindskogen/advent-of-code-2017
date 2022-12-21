@@ -1,19 +1,17 @@
-extern crate regex;
-
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use regex::Regex;
 
 #[derive(Debug, Clone)]
-struct Program {
+pub struct Program {
     name: String,
     weight: u32,
     names_above: Vec<String>,
 }
 
 impl Program {
-    fn parse(line: &str) -> Program {
+    pub fn parse(line: &str) -> Program {
         let re = Regex::new(r"^(\w+) \((\d+)\)").unwrap();
         let caps = re.captures(line).unwrap();
 
@@ -37,8 +35,9 @@ impl Program {
     }
 }
 
-fn main() {
-    let f = File::open("input").expect("file not found");
+#[test]
+fn it_handles_star_1_and_2() {
+    let f = File::open("src/day07/input").expect("file not found");
     let f = BufReader::new(f);
 
     let programs: HashMap<String, Program> = f.lines()
@@ -65,36 +64,40 @@ fn main() {
             root = &program;
         }
 
-        println!("Part 1: {}", root.name);
+        assert_eq!(root.name, "ahnofa");
 
-        let mut program_name = &root.name;
-        let mut diff = 0;
+        assert_eq!(run_part_2(&programs, &mut root), 802)
+    }
+}
 
-        while let Some(program) = programs.get(program_name) {
-            let mut siblings = program.names_above.iter().enumerate()
-                .map(|(index, n)|
-                    (index, sum_sub_tower(&programs, programs.get(n).expect("no program")))
-                ).collect::<Vec<_>>();
-            siblings.sort_by_key(|a| a.1);
+fn run_part_2(programs: &HashMap<String, Program>, root: &mut &&Program) -> u32 {
+    let mut program_name = &root.name;
+    let mut diff = 0;
 
-            let first = siblings.get(0).expect("no first");
-            let middle = siblings.get(siblings.len() / 2usize).expect("no middle");
-            let last = siblings.last().expect("no last");
+    while let Some(program) = programs.get(program_name) {
+        let mut siblings = program.names_above.iter().enumerate()
+            .map(|(index, n)|
+                (index, sum_sub_tower(&programs, programs.get(n).expect("no program")))
+            ).collect::<Vec<_>>();
+        siblings.sort_by_key(|a| a.1);
 
-            if first.1 != last.1 {
-                if first.1 == middle.1 {
-                    diff = last.1 - middle.1;
-                    program_name = program.names_above.get(last.0).unwrap();
-                } else {
-                    diff = middle.1 - first.1;
-                    program_name = program.names_above.get(first.0).unwrap();
-                }
+        let first = siblings.get(0).expect("no first");
+        let middle = siblings.get(siblings.len() / 2usize).expect("no middle");
+        let last = siblings.last().expect("no last");
+
+        if first.1 != last.1 {
+            if first.1 == middle.1 {
+                diff = last.1 - middle.1;
+                program_name = program.names_above.get(last.0).unwrap();
             } else {
-                println!("Part 2: {}", program.weight - diff);
-                return;
+                diff = middle.1 - first.1;
+                program_name = program.names_above.get(first.0).unwrap();
             }
+        } else {
+            return program.weight - diff
         }
     }
+    unreachable!()
 }
 
 fn sum_sub_tower(programs: &HashMap<String, Program>, root: &Program) -> u32 {

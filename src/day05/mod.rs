@@ -1,9 +1,9 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-fn execute_part1(instructions: Vec<i32>) -> u32 {
+pub fn execute_part1(instructions: Vec<i32>) -> u32 {
     let mut pc: i32 = 0;
-    let mut program: Vec<i32> = instructions.clone();
+    let mut program: Vec<i32> = instructions;
     let mut steps = 0;
     let length = program.len() as i32;
 
@@ -18,9 +18,9 @@ fn execute_part1(instructions: Vec<i32>) -> u32 {
     return steps;
 }
 
-fn execute_part2(instructions: Vec<i32>) -> u32 {
+pub fn execute_part2(instructions: Vec<i32>) -> u32 {
     let mut pc: i32 = 0;
-    let mut program: Vec<i32> = instructions.clone();
+    let mut program: Vec<i32> = instructions;
     let mut steps = 0;
     let length = program.len() as i32;
 
@@ -40,11 +40,12 @@ fn execute_part2(instructions: Vec<i32>) -> u32 {
 }
 
 
-fn main() {
+#[test]
+fn it_handles_star_1_and_2() {
     assert_eq!(5, execute_part1(vec![0, 3, 0, 1, -3]));
     assert_eq!(10, execute_part2(vec![0, 3, 0, 1, -3]));
 
-    let f = File::open("input").expect("file not found");
+    let f = File::open("src/day05/input").expect("file not found");
     let f = BufReader::new(f);
 
     let numbers: Vec<i32> = f.lines()
@@ -52,8 +53,8 @@ fn main() {
         .collect();
 
     let steps = execute_part1(numbers.clone());
-    println!("Part 1: {}", steps);
+    assert_eq!(steps, 358309);
 
     let steps = execute_part2(numbers);
-    println!("Part 2: {}", steps);
+    assert_eq!(steps, 28178177);
 }

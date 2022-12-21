@@ -16,7 +16,7 @@ impl Token {
     fn from(string: &str) -> Token {
         match string.parse::<i64>() {
             Ok(num) => Token::Val(num),
-            _ => Token::Var(string.chars().nth(0).unwrap()),
+            _ => Token::Var(string.chars().next().unwrap()),
         }
     }
 }
@@ -65,8 +65,7 @@ impl Expr {
 
 
 #[derive(Debug)]
-struct Program {
-    id: i64,
+pub struct Program {
     values_sent: u32,
     variables: HashMap<char, i64>,
     pc: usize,
@@ -79,7 +78,6 @@ impl Program {
         map.insert('p', p);
 
         Program {
-            id: p,
             values_sent: 0,
             variables: map,
             pc: 0,
@@ -195,8 +193,9 @@ impl Program {
 }
 
 
-fn main() {
-    let f = File::open("input").expect("file not found");
+#[test]
+fn it_handles_star_1_and_2() {
+    let f = File::open("src/day18/input").expect("file not found");
     let f = BufReader::new(f);
 
     let expressions: Vec<Expr> = f.lines()
@@ -206,6 +205,7 @@ fn main() {
     let mut program = Program::new(0);
     let part1 = program.run_program(&expressions);
     println!("Recovered frequency: {}", part1);
+    assert_eq!(part1, 8600);
 
     let exps1 = expressions.clone();
     let exps2 = expressions.clone();
@@ -220,6 +220,7 @@ fn main() {
     let h2 = thread::spawn(move || {
         let times = program2.run_program_channels(&exps2, tx2, rx2);
         println!("Send called times: {}", times);
+        assert_eq!(times, 7239);
     });
 
     h1.join().expect("Thread 0 failed");

@@ -18,9 +18,9 @@ fn index_of_max(array: Vec<u32>) -> (usize, u32) {
     (i, max_value)
 }
 
-fn rebalance_part1(input: Vec<u32>) -> u32 {
+pub fn rebalance_part1(input: Vec<u32>) -> u32 {
     let mut cycles: u32 = 0;
-    let mut banks = input.clone();
+    let mut banks = input;
     let mut previous: HashSet<Vec<u32>> = HashSet::new();
     previous.insert(banks.clone());
     loop {
@@ -38,9 +38,9 @@ fn rebalance_part1(input: Vec<u32>) -> u32 {
     cycles
 }
 
-fn rebalance_part2(input: Vec<u32>) -> u32 {
+pub fn rebalance_part2(input: Vec<u32>) -> u32 {
     let mut cycles: u32 = 0;
-    let mut banks = input.clone();
+    let mut banks = input;
     let mut previous: HashMap<Vec<u32>, u32> = HashMap::new();
     previous.insert(banks.clone(), cycles);
     loop {
@@ -61,11 +61,12 @@ fn rebalance_part2(input: Vec<u32>) -> u32 {
     cycles - previous.get(&banks).unwrap()
 }
 
-fn main() {
+#[test]
+fn it_handles_star_1_and_2() {
     assert_eq!(5, rebalance_part1(vec![0, 2, 7, 0]));
     assert_eq!(4, rebalance_part2(vec![0, 2, 7, 0]));
 
-    let f = File::open("input").expect("file not found");
+    let f = File::open("src/day06/input").expect("file not found");
     let f = BufReader::new(f);
 
     for line in f.lines() {
@@ -76,10 +77,10 @@ fn main() {
             .collect();
 
         let cycles = rebalance_part1(banks.clone());
-        println!("Part 1: {:?}", cycles);
+        assert_eq!(cycles, 14029);
 
         let cycles = rebalance_part2(banks);
-        println!("Part 2: {:?}", cycles);
+        assert_eq!(cycles, 2765);
     }
 
 }

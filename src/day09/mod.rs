@@ -9,7 +9,7 @@ enum ParserState {
     Ignore,
 }
 
-fn parse_stream(string: &str) -> (u32, u32) {
+pub fn parse_stream(string: &str) -> (u32, u32) {
     let group_count = 0;
     let group_score = 0;
     let parser_state = ParserState::Initial;
@@ -42,8 +42,9 @@ fn parse_stream(string: &str) -> (u32, u32) {
     (group_score, parsed_chars)
 }
 
-fn main() {
-    let f = File::open("input").expect("file not found");
+#[test]
+fn it_handles_star_1_and_2() {
+    let f = File::open("src/day09/input").expect("file not found");
     let f = BufReader::new(f);
 
     let string = f.lines().nth(0).unwrap().expect("Error reading line");
@@ -67,6 +68,9 @@ fn main() {
     assert_eq!(parse_stream("<{o\"i!a,<{i<a>").1, 10);
 
     let (score_part1, score_part2) = parse_stream(&string);
+
+    assert_eq!(score_part1, 8337);
+    assert_eq!(score_part2, 4330);
 
     println!("Score part 1: {}", score_part1);
     println!("Score part 2: {}", score_part2);
