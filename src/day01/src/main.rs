@@ -16,6 +16,7 @@ fn calc_sum(input: &str, index_delta: usize) -> u32 {
     sum
 }
 
+#[test]
 fn main() {
     assert_eq!(6, calc_sum("1212", 2));
     assert_eq!(0, calc_sum("1221", 2));
